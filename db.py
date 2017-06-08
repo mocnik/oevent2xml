@@ -14,16 +14,17 @@ SELECT_COMPETITION_DATA = 'SELECT * FROM OEVCOMPETITION'
 
 def get_data():
     conn = firebirdsql.connect(dsn=CONNECTION_STRING, user=USER, password=PASSWORD)
-    cur = conn.cursor()
-    cur.execute(SELECT_COMPETITORS)
-    data = cur.fetchall()
-    description = cur.description
-    cur.close()
+    competition = get_table(conn, "OEVCOMPETITION")
+    competitors = get_table(conn, "OEVLISTSVIEW")
     conn.close()
-    return data, description
+    return competition, competitors
 
-def get_competitors():
-    competitors, desc = get_data()
-    description = [d[0] for d in desc]
-    competitor_class = namedtuple('Competitor', description)
-    return [competitor_class(*competitor) for competitor in competitors]
+
+def get_table(conn, table):
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM %s" % table)
+    data = cur.fetchall()
+    desc = [description[0] for description in cur.description]
+    cur.close()
+    table_class = namedtuple(table, desc)
+    return [table_class(*row) for row in data]
