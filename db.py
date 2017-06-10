@@ -1,18 +1,13 @@
-import firebirdsql
-
+""" Module connecting to OEVENT Firebird SQL database and exporting competition data. """
 from collections import namedtuple
+
+import firebirdsql
 
 USER = 'SYSDBA'
 PASSWORD = 'masterkey'
-CONNECTION_STRING = '192.168.1.5:C:\\Users\\smocnik\\AppData\\Roaming\\OEvent\\Data\\Competition10.gdb'
-
-SELECT_COMPETITORS = 'SELECT * FROM OEVLISTSVIEW'
-SELECT_COMPETITION_DATA = 'SELECT * FROM OEVCOMPETITION'
-
-# cur.describe
-# (name, type_code, display_size, internal_size, precision, scale, null_ok)
 
 def get_data(connection_string):
+    """ Get competition data from firebird sql database at `connection_string`. """
     conn = firebirdsql.connect(dsn=connection_string, user=USER, password=PASSWORD)
     competition = get_table(conn, "OEVCOMPETITION")
     competitors = get_table(conn, "OEVLISTSVIEW")
@@ -21,6 +16,7 @@ def get_data(connection_string):
 
 
 def get_table(conn, table):
+    """ Return `table` from `conn` and return it as named tuple. """
     cur = conn.cursor()
     cur.execute("SELECT * FROM %s" % table)
     data = cur.fetchall()
