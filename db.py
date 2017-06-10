@@ -9,10 +9,12 @@ PASSWORD = 'masterkey'
 def get_data(connection_string):
     """ Get competition data from firebird sql database at `connection_string`. """
     conn = firebirdsql.connect(dsn=connection_string, user=USER, password=PASSWORD)
-    competition = get_table(conn, "OEVCOMPETITION")
-    competitors = get_table(conn, "OEVLISTSVIEW")
-    conn.close()
-    return competition, competitors
+    try:
+        competition = get_table(conn, "OEVCOMPETITION")
+        competitors = get_table(conn, "OEVLISTSVIEW")
+        return competition, competitors
+    finally:
+        conn.close()
 
 
 def get_table(conn, table):
