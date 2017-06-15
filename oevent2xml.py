@@ -7,7 +7,8 @@ import pyxb.utils.domutils
 
 import db
 from iof import ResultStatus, ResultList, PersonResult, Person, PersonName, Namespace, \
-    PersonRaceResult, Organisation, ClassResult, Class, STD_ANON, DateAndOptionalTime, Event
+    PersonRaceResult, Organisation, ClassResult, Class, STD_ANON, DateAndOptionalTime, \
+    Event, PersonStart, PersonRaceStart, ClassStart, StartList, Id
 
 pyxb.utils.domutils.BindingDOMSupport.SetDefaultNamespace(Namespace)
 
@@ -20,6 +21,84 @@ STATUS_CODES = {
     5: ResultStatus.MissingPunch
 }
 
+def to_person_start(competitor, start_time):
+    """
+    Args:
+        competitor: competitor data from OEVENT db
+        start_time: competition start time
+    Returns:
+        iof.PersonStart
+    """
+    start = start_time + timedelta(seconds=competitor.STARTTIME1 / 100)
+
+    x_result = PersonStart()
+    x_result.Person = Person.Factory(Name=PersonName.Factory(
+        Given=competitor.FIRSTNAME, Family=competitor.LASTNAME))
+    if competitor.WREID:
+        iof_id = Id(int(competitor.WREID), type="IOF")
+        x_result.Person.Id.append(iof_id)
+    if competitor.CLUBLONGNAME:
+        x_result.Organisation = Organisation.Factory(
+            Name=competitor.CLUBLONGNAME)
+
+    x_person_start = PersonRaceStart.Factory(StartTime=start.isoformat() + "+02:00")
+
+    x_result.Start.append(x_person_start)
+    return x_result
+
+def to_class_start(category, start_time):
+    """
+    Args:
+        competitor: competitors for category from OEVENT db
+        start_time: competition start time
+    Returns:
+        iof.ClassStart
+    """
+    x_class_start = ClassStart()
+    x_class_start.Class = Class.Factory(
+        Name=category[0].CATEGORYNAME, ShortName=category[0].CATEGORYNAME)
+
+    for competitor in category:
+        x_class_start.PersonStart.append(to_person_start(competitor, start_time))
+    return x_class_start
+
+def to_start_list(competition, categories):
+    """
+    Args:
+        competition: competiton data from OEVENT db
+        categories: competitors data from OEVENT db
+    Returns:
+        iof.ResultList
+    """
+    start_time = competition.DATE1 + timedelta(seconds=competition.FIRSTSTART1)
+    x_start_time = DateAndOptionalTime.Factory(
+        Date=start_time.date().isoformat(), Time=start_time.time().isoformat() + "+02:00")
+    x_event = Event.Factory(Name=competition.COMPETITIONNAME, StartTime=x_start_time)
+
+    x_start_list = StartList()
+    x_start_list.iofVersion = "3.0"
+    x_start_list.Event = x_event
+    x_start_list.createTime = datetime.now().isoformat() + "+02:00"
+    x_start_list.creator = "OEVENT2XML v0.1"
+
+    for _, category in categories.items():
+        x_start_list.ClassStart.append(to_class_start(category, start_time))
+
+    return x_start_list
+
+def to_xml_start_list(connection_string):
+    """
+    Connects to the db, retrieves competition data and generates IOF v3 ResultList xml
+
+    Returns:
+        str: start list in IOF v3 xml format
+    """
+    competition, categories = get_from_oevent(connection_string)
+
+    x_start_list = to_start_list(competition, categories)
+
+    with open("startList.xml", "wb") as f:
+        f.write(x_start_list.toxml("utf-8"))
 
 def to_person_result(competitor, start_time):
     """
@@ -46,7 +125,6 @@ def to_person_result(competitor, start_time):
 
     x_result.Result.append(x_person_result)
     return x_result
-
 
 def to_class_result(category, start_time):
     """
@@ -97,18 +175,23 @@ def to_xml(connection_string):
     Returns:
         str: results in IOF v3 xml format
     """
+    competition, categories = get_from_oevent(connection_string)
+
+    x_result_list = to_result_list(competition, categories)
+
+    return x_result_list.toxml("utf-8")
+
+def get_from_oevent(connection_string):
     competition, competitors = db.get_data(connection_string)
     competition = competition[0]
 
     categories = defaultdict(list)
 
     for competitor in competitors:
-        if (not competitor.ISVACANT) and competitor.ISRUNNING1:
+        if (not competitor.ISVACANT) and competitor.ISRUNNING1 and \
+            competitor.CATEGORYNAME in ["M21E", "W21E"] and competitor.WREID:
             categories[competitor.CATEGORYID].append(competitor)
-
-    x_result_list = to_result_list(competition, categories)
-
-    return x_result_list.toxml("utf-8")
+    return competition, categories
 
 if __name__ == "__main__":
     with open("r.xml", "wb") as f:
