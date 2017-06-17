@@ -7,7 +7,8 @@ import pyxb.utils.domutils
 
 import db
 from iof import ResultStatus, ResultList, PersonResult, Person, PersonName, Namespace, \
-    PersonRaceResult, Organisation, ClassResult, Class, STD_ANON, DateAndOptionalTime, Event
+    PersonRaceResult, Organisation, ClassResult, Class, STD_ANON, DateAndOptionalTime, \
+    Event, Id
 
 pyxb.utils.domutils.BindingDOMSupport.SetDefaultNamespace(Namespace)
 
@@ -20,6 +21,10 @@ STATUS_CODES = {
     5: ResultStatus.MissingPunch
 }
 
+CAT = {
+    "M21E": "Men",
+    "W21E": "Women"
+}
 
 def to_person_result(competitor, start_time):
     """
@@ -29,11 +34,15 @@ def to_person_result(competitor, start_time):
     Returns:
         iof.PersonResult
     """
-    start = start_time + timedelta(seconds=competitor.STARTTIME1 / 100)
+    start_tt = competitor.STARTTIME1 / 100 if competitor.STARTTIME1 else 0
+    start = start_time + timedelta(seconds=start_tt)
 
     x_result = PersonResult()
     x_result.Person = Person.Factory(Name=PersonName.Factory(
         Given=competitor.FIRSTNAME, Family=competitor.LASTNAME))
+    if competitor.WREID:
+        iof_id = Id(int(competitor.WREID), type="IOF")
+        x_result.Person.Id.append(iof_id)
     if competitor.CLUBLONGNAME:
         x_result.Organisation = Organisation.Factory(
             Name=competitor.CLUBLONGNAME)
@@ -58,7 +67,7 @@ def to_class_result(category, start_time):
     """
     x_class_result = ClassResult()
     x_class_result.Class = Class.Factory(
-        Name=category[0].CATEGORYNAME, ShortName=category[0].CATEGORYNAME)
+        Name=CAT[category[0].CATEGORYNAME], ShortName=CAT[category[0].CATEGORYNAME])
 
     for competitor in category:
         x_class_result.PersonResult.append(to_person_result(competitor, start_time))
@@ -83,7 +92,7 @@ def to_result_list(competition, categories):
     x_result_list.Event = x_event
     x_result_list.createTime = datetime.now().isoformat() + "+02:00"
     x_result_list.creator = "OEVENT2XML v0.1"
-    x_result_list.status = STD_ANON.Snapshot
+    x_result_list.status = STD_ANON.Complete
 
     for _, category in categories.items():
         x_result_list.ClassResult.append(to_class_result(category, start_time))
@@ -103,7 +112,8 @@ def to_xml(connection_string):
     categories = defaultdict(list)
 
     for competitor in competitors:
-        if (not competitor.ISVACANT) and competitor.ISRUNNING1:
+        if (not competitor.ISVACANT) and competitor.ISRUNNING1 and \
+           competitor.CATEGORYNAME in ["M21E", "W21E"] and competitor.WREID:
             categories[competitor.CATEGORYID].append(competitor)
 
     x_result_list = to_result_list(competition, categories)
