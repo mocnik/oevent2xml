@@ -26,7 +26,7 @@ CAT = {
     "W21E": "Women"
 }
 
-def to_person_result(competitor, start_time):
+def to_person_result(competitor, start_time, winning_time=None):
     """
     Args:
         competitor: competitor data from OEVENT db
@@ -52,6 +52,8 @@ def to_person_result(competitor, start_time):
     x_person_result.StartTime = start.isoformat() + "+02:00"
     if competitor.COMPETITIONTIME1:
         x_person_result.Time = competitor.COMPETITIONTIME1 / 100
+        if competitor.FINISHTYPE1 == 1:
+            x_person_result.TimeBehind = (competitor.COMPETITIONTIME1 - winning_time) / 100
 
     x_result.Result.append(x_person_result)
     return x_result
@@ -68,9 +70,12 @@ def to_class_result(category, start_time):
     x_class_result = ClassResult()
     x_class_result.Class = Class.Factory(
         Name=CAT[category[0].CATEGORYNAME], ShortName=CAT[category[0].CATEGORYNAME])
+    winning_time = min(competitor.COMPETITIONTIME1
+                       for competitor in category if competitor.FINISHTYPE1 == 1)
 
     for competitor in category:
-        x_class_result.PersonResult.append(to_person_result(competitor, start_time))
+        x_class_result.PersonResult.append(
+            to_person_result(competitor, start_time, winning_time=winning_time))
     return x_class_result
 
 
