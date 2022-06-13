@@ -29,7 +29,10 @@ def to_person_result(competitor, start_time):
     Returns:
         iof.PersonResult
     """
-    start = start_time + timedelta(seconds=competitor.STARTTIME1 / 100)
+    try:
+        start = start_time + timedelta(seconds=competitor.STARTTIME1 / 100)
+    except:
+        start = start_time
 
     x_result = PersonResult()
     x_result.Person = Person.Factory(Name=PersonName.Factory(

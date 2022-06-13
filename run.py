@@ -4,7 +4,7 @@ from time import sleep
 
 import oevent2xml
 
-CONNECTION_STRING = "192.168.1.5:C:\\Users\\smocnik\\AppData\\Roaming\\OEvent\\Data\\Competition10.gdb"
+CONNECTION_STRING = "localhost:3050/C:\\Users\\Klemen\\AppData\\Roaming\\OEvent\\Data\\Competition6.gdb"
 WAIT_TIME = 30
 RESULTS_FILE = "results.xml"
 
