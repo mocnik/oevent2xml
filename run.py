@@ -14,12 +14,8 @@ RESULTS_FILE = "results.xml"
 # connection to OZS
 # set UPLOAD to False in case you do not want the data to be uploaded to OZS
 UPLOAD = True
-COMPETITION_ID = 1858
+COMPETITION_ID = 9999
 COMPETITION_SECRET = "0ae283bb8749abc3b3cc3e6bd3049d04"
-# ozs1855 ee6d842a2ef75491c9098fb802e9125b
-# ozs1856 a82434b606afdc06df532ca16cf9f65c
-# ozs1857 82d1b54016b992c984eebd820a14c0ad
-# ozs1858 0ae283bb8749abc3b3cc3e6bd3049d04
 UPLOAD_URL = "http://orientacijska-zveza.si/sl/api/live/upload.html"
 
 LOGGER = logging.getLogger(__name__)
